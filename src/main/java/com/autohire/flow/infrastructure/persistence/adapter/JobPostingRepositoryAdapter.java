@@ -11,7 +11,9 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -47,37 +49,46 @@ public class JobPostingRepositoryAdapter implements JobPostingPort {
 
     @Override
     @Transactional
-    public void saveAll(List<JobPosting> jobPostings) {
+    public List<JobPosting> saveAll(List<JobPosting> jobPostings) {
         log.info("Saving batch of {} job postings", jobPostings.size());
         
         try {
             List<JobPostingEntity> entities = jobPostings.stream()
                 .map(this::convertDomainToEntity)
                 .collect(Collectors.toList());
-            jpaJobPostingRepository.saveAll(entities);
-            log.info("Successfully saved {} job postings", jobPostings.size());
+            List<JobPostingEntity> savedEntities = jpaJobPostingRepository.saveAll(entities);
+            log.info("Successfully saved {} job postings", savedEntities.size());
+            return savedEntities.stream()
+                .map(this::convertEntityToDomain)
+                .collect(Collectors.toList());
         } catch (Exception e) {
             log.error("Error saving batch of job postings", e);
             throw new RuntimeException("Failed to save job postings batch", e);
         }
     }
-
+    
     @Override
     @Transactional(readOnly = true)
-    public JobPosting findById(Long jobPostingId) throws JobNotFoundException {
+    public Optional<JobPosting> findById(Long jobPostingId) {
         log.info("Fetching job posting by ID: {}", jobPostingId);
         
-        JobPostingEntity entity = jpaJobPostingRepository.findById(jobPostingId)
-            .orElseThrow(() -> {
-                log.warn("Job posting not found with ID: {}", jobPostingId);
-                return new JobNotFoundException(
-                    "Job posting not found with ID: " + jobPostingId
-                );
-            });
-        
-        return convertEntityToDomain(entity);
+        return jpaJobPostingRepository.findById(jobPostingId)
+            .map(this::convertEntityToDomain);
     }
-
+    
+    @Override
+    @Transactional(readOnly = true)
+    public List<JobPosting> findAll() {
+        log.info("Fetching all job postings");
+        
+        List<JobPostingEntity> entities = jpaJobPostingRepository.findAll();
+        log.debug("Found {} job postings", entities.size());
+        
+        return entities.stream()
+            .map(this::convertEntityToDomain)
+            .collect(Collectors.toList());
+    }
+    
     @Override
     @Transactional(readOnly = true)
     public List<JobPosting> searchByTitle(String title) {
@@ -93,10 +104,10 @@ public class JobPostingRepositoryAdapter implements JobPostingPort {
 
     @Override
     @Transactional(readOnly = true)
-    public List<JobPosting> searchByCompany(String company) {
+    public List<JobPosting> findByCompany(String company) {
         log.info("Searching job postings by company: {}", company);
         
-        List<JobPostingEntity> entities = jpaJobPostingRepository.findByCompanyNameContainingIgnoreCase(company);
+        List<JobPostingEntity> entities = jpaJobPostingRepository.findByCompanyContainingIgnoreCase(company);
         log.debug("Found {} job postings for company: {}", entities.size(), company);
         
         return entities.stream()
@@ -106,7 +117,7 @@ public class JobPostingRepositoryAdapter implements JobPostingPort {
 
     @Override
     @Transactional(readOnly = true)
-    public List<JobPosting> searchByLocation(String location) {
+    public List<JobPosting> findByLocation(String location) {
         log.info("Searching job postings by location: {}", location);
         
         List<JobPostingEntity> entities = jpaJobPostingRepository.findByLocationContainingIgnoreCase(location);
@@ -154,6 +165,15 @@ public class JobPostingRepositoryAdapter implements JobPostingPort {
             throw new RuntimeException("Failed to update job posting", e);
         }
     }
+    
+    @Override
+    @Transactional
+    public void deleteById(Long jobId) {
+        log.info("Deleting job posting with ID: {}", jobId);
+        
+        jpaJobPostingRepository.deleteById(jobId);
+        log.info("Job posting deleted successfully with ID: {}", jobId);
+    }
 
     /**
      * Convert domain JobPosting model to JPA entity
@@ -162,14 +182,25 @@ public class JobPostingRepositoryAdapter implements JobPostingPort {
         JobPostingEntity entity = new JobPostingEntity();
         entity.setId(jobPosting.getId());
         entity.setTitle(jobPosting.getTitle());
-        entity.setCompanyName(jobPosting.getCompanyName());
+        entity.setCompany(jobPosting.getCompany());  // Use setCompany, not setCompanyName
         entity.setDescription(jobPosting.getDescription());
         entity.setLocation(jobPosting.getLocation());
         entity.setSalaryMin(jobPosting.getSalaryMin());
         entity.setSalaryMax(jobPosting.getSalaryMax());
         entity.setEmploymentType(jobPosting.getEmploymentType());
-        entity.setRequiredSkills(jobPosting.getRequiredSkills());
-        entity.setEmbedding(jobPosting.getEmbedding()); // Will be stored as vector(768)
+        // Convert List<String> to comma-separated String for requiredSkills
+        if (jobPosting.getRequiredSkills() != null && !jobPosting.getRequiredSkills().isEmpty()) {
+            entity.setRequiredSkills(String.join(",", jobPosting.getRequiredSkills()));
+        }
+        // Convert float[] to String for vector storage
+        if (jobPosting.getEmbedding() != null) {
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < jobPosting.getEmbedding().length; i++) {
+                if (i > 0) sb.append(",");
+                sb.append(jobPosting.getEmbedding()[i]);
+            }
+            entity.setEmbedding(sb.toString());
+        }
         entity.setExpiresAt(jobPosting.getExpiresAt());
         entity.setCreatedAt(jobPosting.getCreatedAt());
         entity.setUpdatedAt(jobPosting.getUpdatedAt());
@@ -180,18 +211,34 @@ public class JobPostingRepositoryAdapter implements JobPostingPort {
      * Convert JPA entity to domain JobPosting model
      */
     private JobPosting convertEntityToDomain(JobPostingEntity entity) {
+        // Create job posting with basic info
         JobPosting jobPosting = new JobPosting(
             entity.getId(),
             entity.getTitle(),
-            entity.getCompanyName(),
+            entity.getCompany(),
             entity.getDescription()
         );
         jobPosting.setLocation(entity.getLocation());
         jobPosting.setSalaryMin(entity.getSalaryMin());
         jobPosting.setSalaryMax(entity.getSalaryMax());
         jobPosting.setEmploymentType(entity.getEmploymentType());
-        jobPosting.setRequiredSkills(entity.getRequiredSkills());
-        jobPosting.setEmbedding(entity.getEmbedding());
+        
+        // Convert comma-separated String to List<String> for requiredSkills
+        if (entity.getRequiredSkills() != null && !entity.getRequiredSkills().isEmpty()) {
+            List<String> skills = Arrays.asList(entity.getRequiredSkills().split(","));
+            jobPosting.setRequiredSkills(skills);
+        }
+        
+        // Convert String to float[] for embedding
+        if (entity.getEmbedding() != null && !entity.getEmbedding().isEmpty()) {
+            String[] parts = entity.getEmbedding().split(",");
+            float[] embedding = new float[parts.length];
+            for (int i = 0; i < parts.length; i++) {
+                embedding[i] = Float.parseFloat(parts[i].trim());
+            }
+            jobPosting.setEmbedding(embedding);
+        }
+        
         jobPosting.setExpiresAt(entity.getExpiresAt());
         jobPosting.setCreatedAt(entity.getCreatedAt());
         jobPosting.setUpdatedAt(entity.getUpdatedAt());

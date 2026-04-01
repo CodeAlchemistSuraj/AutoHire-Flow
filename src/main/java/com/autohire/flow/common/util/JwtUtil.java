@@ -24,6 +24,10 @@ public class JwtUtil {
     @Value("${jwt.expiration}")
     private Long expiration;
     
+    private SecretKey getSigningKey() {
+        return Keys.hmacShaKeyFor(secretKey.getBytes());
+    }
+    
     /**
      * Generates a JWT token for a user.
      * @param userId user ID
@@ -31,14 +35,12 @@ public class JwtUtil {
      * @return JWT token string
      */
     public String generateToken(Long userId, String email) {
-        SecretKey key = Keys.hmacShaKeyFor(secretKey.getBytes());
-        
         return Jwts.builder()
             .subject(email)
             .claim("userId", userId)
             .issuedAt(new Date())
             .expiration(new Date(System.currentTimeMillis() + expiration))
-            .signWith(key, SignatureAlgorithm.HS512)
+            .signWith(getSigningKey(), Jwts.SIG.HS512)
             .compact();
     }
     
@@ -48,11 +50,11 @@ public class JwtUtil {
      * @return user ID
      */
     public Long extractUserId(String token) {
-        return Jwts.parserBuilder()
-            .setSigningKey(Keys.hmacShaKeyFor(secretKey.getBytes()))
+        return Jwts.parser()
+            .verifyWith(getSigningKey())
             .build()
-            .parseClaimsJws(token)
-            .getBody()
+            .parseSignedClaims(token)
+            .getPayload()
             .get("userId", Long.class);
     }
     
@@ -62,11 +64,11 @@ public class JwtUtil {
      * @return email
      */
     public String extractEmail(String token) {
-        return Jwts.parserBuilder()
-            .setSigningKey(Keys.hmacShaKeyFor(secretKey.getBytes()))
+        return Jwts.parser()
+            .verifyWith(getSigningKey())
             .build()
-            .parseClaimsJws(token)
-            .getBody()
+            .parseSignedClaims(token)
+            .getPayload()
             .getSubject();
     }
     
@@ -77,10 +79,10 @@ public class JwtUtil {
      */
     public boolean validateToken(String token) {
         try {
-            Jwts.parserBuilder()
-                .setSigningKey(Keys.hmacShaKeyFor(secretKey.getBytes()))
+            Jwts.parser()
+                .verifyWith(getSigningKey())
                 .build()
-                .parseClaimsJws(token);
+                .parseSignedClaims(token);
             return true;
         } catch (JwtException e) {
             log.error("JWT validation failed: {}", e.getMessage());
@@ -95,11 +97,11 @@ public class JwtUtil {
      */
     public boolean isTokenExpired(String token) {
         try {
-            Date expiration = Jwts.parserBuilder()
-                .setSigningKey(Keys.hmacShaKeyFor(secretKey.getBytes()))
+            Date expiration = Jwts.parser()
+                .verifyWith(getSigningKey())
                 .build()
-                .parseClaimsJws(token)
-                .getBody()
+                .parseSignedClaims(token)
+                .getPayload()
                 .getExpiration();
             
             return expiration.before(new Date());
@@ -107,5 +109,26 @@ public class JwtUtil {
             log.error("Error extracting expiration: {}", e.getMessage());
             return true;
         }
+    }
+    
+    /**
+     * Get email from token (alias for extractEmail)
+     */
+    public String getEmailFromToken(String token) {
+        return extractEmail(token);
+    }
+    
+    /**
+     * Get user ID from token (alias for extractUserId)
+     */
+    public Long getUserIdFromToken(String token) {
+        return extractUserId(token);
+    }
+    
+    /**
+     * Get expiration in milliseconds
+     */
+    public Long getExpirationMs() {
+        return expiration;
     }
 }

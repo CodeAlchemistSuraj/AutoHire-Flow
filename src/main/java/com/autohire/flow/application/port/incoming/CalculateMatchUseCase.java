@@ -1,28 +1,34 @@
 package com.autohire.flow.application.port.incoming;
 
+import java.time.Instant;
+import java.util.List;
+
 /**
- * Use case for calculating match score between resume and job.
+ * Use case for calculating match scores between resumes and job postings.
+ * Orchestrates the matching process using multiple strategies.
  */
 public interface CalculateMatchUseCase {
     
     /**
-     * Calculates semantic matching score for user's resume against a job.
-     * @param command match command with job and user details
-     * @return MatchResult containing match score and details
+     * Calculates the match between a resume and a job posting.
+     * @param command calculate match command
+     * @return MatchResult enriched with score, quality level, and explanation
      */
-    MatchResult execute(MatchCommand command);
+    MatchResult execute(CalculateMatchCommand command);
     
-    record MatchCommand(
-        Long userId,
-        Long jobId
-    ) {}
+    record CalculateMatchCommand(Long userId, Long jobId) {}
     
     record MatchResult(
         Long matchId,
-        Double matchScore,  // 0-100
-        String qualityLevel,  // EXCELLENT, GOOD, MODERATE, LOW
-        java.util.List<String> matchingSkills,
-        java.util.List<String> missingSkills,
-        String explanation
+        Long userId,
+        Long jobId,
+        Integer score,
+        String qualityLevel,  // EXCELLENT, GOOD, FAIR, POOR
+        List<String> matchingSkills,
+        List<String> missingSkills,
+        String explanation,
+        String status,
+        Instant createdAt,
+        Instant updatedAt
     ) {}
 }

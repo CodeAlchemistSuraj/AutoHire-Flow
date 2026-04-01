@@ -1,17 +1,11 @@
 package com.autohire.flow.domain.model;
 
-import lombok.*;
 import java.time.Instant;
 
 /**
  * Feedback domain entity representing user feedback on a match.
  * Used to improve matching algorithms and track user preferences.
  */
-@Getter
-@Setter
-@Builder
-@AllArgsConstructor
-@NoArgsConstructor
 public class Feedback {
     
     private Long id;
@@ -27,6 +21,79 @@ public class Feedback {
     private Instant submittedAt;
     
     private Instant createdAt;
+    
+    // Constructors
+    public Feedback() {
+    }
+    
+    public Feedback(Long id, Long userId, Long matchResultId, String feedbackType, 
+                    String comments, Instant submittedAt, Instant createdAt) {
+        this.id = id;
+        this.userId = userId;
+        this.matchResultId = matchResultId;
+        this.feedbackType = feedbackType;
+        this.comments = comments;
+        this.submittedAt = submittedAt;
+        this.createdAt = createdAt;
+    }
+    
+    // Getters
+    public Long getId() {
+        return id;
+    }
+    
+    public Long getUserId() {
+        return userId;
+    }
+    
+    public Long getMatchResultId() {
+        return matchResultId;
+    }
+    
+    public String getFeedbackType() {
+        return feedbackType;
+    }
+    
+    public String getComments() {
+        return comments;
+    }
+    
+    public Instant getSubmittedAt() {
+        return submittedAt;
+    }
+    
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+    
+    // Setters
+    public void setId(Long id) {
+        this.id = id;
+    }
+    
+    public void setUserId(Long userId) {
+        this.userId = userId;
+    }
+    
+    public void setMatchResultId(Long matchResultId) {
+        this.matchResultId = matchResultId;
+    }
+    
+    public void setFeedbackType(String feedbackType) {
+        this.feedbackType = feedbackType;
+    }
+    
+    public void setComments(String comments) {
+        this.comments = comments;
+    }
+    
+    public void setSubmittedAt(Instant submittedAt) {
+        this.submittedAt = submittedAt;
+    }
+    
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
+    }
     
     /**
      * Validates feedback has required fields.

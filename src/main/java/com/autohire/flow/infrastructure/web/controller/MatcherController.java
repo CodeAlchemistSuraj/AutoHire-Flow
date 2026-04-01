@@ -47,21 +47,24 @@ public class MatcherController {
         
         try {
             // Create match command
-            CalculateMatchUseCase.MatchCommand command = new CalculateMatchUseCase.MatchCommand(
+            CalculateMatchUseCase.CalculateMatchCommand command = new CalculateMatchUseCase.CalculateMatchCommand(
                 userId,
                 request.getJobId()
             );
             
             // Execute use case
-            CalculateMatchUseCase.MatchResult result = calculateMatchUseCase.calculateMatch(command);
+            CalculateMatchUseCase.MatchResult result = calculateMatchUseCase.execute(command);
             
-            // Build response
+            // Build response - FIXED: Use correct constructor with all fields
             MatchScoreResponse response = new MatchScoreResponse(
-                result.score(),
+                null,  // matchResultId - not available in result
+                (double) result.score(),  // matchScore
                 result.qualityLevel(),
                 result.matchingSkills(),
                 result.missingSkills(),
-                result.explanation()
+                result.explanation(),
+                null,  // jobTitle - not available in result
+                null   // company - not available in result
             );
             
             log.info("Match calculated successfully for user: {} and job: {} with score: {}", 
@@ -69,7 +72,7 @@ public class MatcherController {
             
             return ResponseEntity
                 .ok()
-                .body(ApiResponse.success(response, "Match score calculated successfully"));
+                .body(ApiResponse.success("Match score calculated successfully", response));
                 
         } catch (Exception e) {
             log.error("Match calculation failed for user: {} and job: {}", userId, request.getJobId(), e);

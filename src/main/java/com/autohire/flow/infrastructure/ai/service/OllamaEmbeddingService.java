@@ -35,7 +35,7 @@ public class OllamaEmbeddingService implements EmbeddingPort {
     private static final int EMBEDDING_DIMENSION = 768;
 
     @Override
-    public double[] embed(String text) {
+    public float[] embed(String text) {
         log.debug("Generating embedding for text length: {}", text.length());
         
         if (text == null || text.trim().isEmpty()) {
@@ -62,15 +62,21 @@ public class OllamaEmbeddingService implements EmbeddingPort {
                 throw new RuntimeException("Failed to generate embedding");
             }
             
-            double[] embedding = response.embeddings.get(0);
+            double[] doubleEmbedding = response.embeddings.get(0);
             
-            if (embedding.length != EMBEDDING_DIMENSION) {
+            if (doubleEmbedding.length != EMBEDDING_DIMENSION) {
                 log.warn("Embedding dimension mismatch: expected {}, got {}", 
-                    EMBEDDING_DIMENSION, embedding.length);
+                    EMBEDDING_DIMENSION, doubleEmbedding.length);
             }
             
-            log.debug("Embedding generated successfully with dimension: {}", embedding.length);
-            return embedding;
+            // Convert double[] to float[]
+            float[] floatEmbedding = new float[doubleEmbedding.length];
+            for (int i = 0; i < doubleEmbedding.length; i++) {
+                floatEmbedding[i] = (float) doubleEmbedding[i];
+            }
+            
+            log.debug("Embedding generated successfully with dimension: {}", floatEmbedding.length);
+            return floatEmbedding;
             
         } catch (RestClientException e) {
             log.error("Ollama service error: {}", e.getMessage());
@@ -82,7 +88,7 @@ public class OllamaEmbeddingService implements EmbeddingPort {
     }
 
     @Override
-    public List<double[]> embedBatch(List<String> texts) {
+    public List<float[]> embedBatch(List<String> texts) {
         log.info("Generating embeddings for {} texts", texts.size());
         
         return texts.stream()

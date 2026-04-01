@@ -39,7 +39,7 @@ public class SubmitFeedbackUseCaseImpl implements SubmitFeedbackUseCase {
 
     @Override
     @Transactional
-    public FeedbackResult submitFeedback(FeedbackCommand command) {
+    public FeedbackResult execute(FeedbackCommand command) {
         log.info("Processing feedback for user: {} on match result: {} with type: {}", 
             command.userId(), command.matchResultId(), command.feedbackType());
         
@@ -48,33 +48,28 @@ public class SubmitFeedbackUseCaseImpl implements SubmitFeedbackUseCase {
         
         try {
             // Find match result
-            var matchResult = matchResultPort.findByUserAndJob(command.userId(), command.matchResultId())
-                .or(() -> {
-                    // Try direct lookup if first attempt fails
-                    // In production, would need to refactor to support direct ID lookup
-                    log.warn("Could not find match result by user and job, attempting direct lookup");
-                    return java.util.Optional.empty();
-                });
+            var matchResult = matchResultPort.findByUserAndJob(command.userId(), command.matchResultId());
             
             if (matchResult.isEmpty()) {
-                log.warn("Match result not found for ID: {}", command.matchResultId());
+                log.warn("Match result not found for user: {} and job: {}", 
+                    command.userId(), command.matchResultId());
                 throw new IllegalArgumentException(
-                    "Match result not found with ID: " + command.matchResultId()
+                    "Match result not found for user: " + command.userId() + " and job: " + command.matchResultId()
                 );
             }
             
             MatchResult result = matchResult.get();
             
-            // Check if feedback already exists
-            var existingFeedback = feedbackPort.findByMatchResultId(command.matchResultId());
+            // Check if feedback already exists - findByMatchResultId returns List<Feedback>
+            List<Feedback> existingFeedback = feedbackPort.findByMatchResultId(command.matchResultId());
             
             Feedback feedback;
-            if (existingFeedback.isPresent()) {
-                // Update existing feedback
-                feedback = existingFeedback.get();
+            if (!existingFeedback.isEmpty()) {
+                // Update existing feedback (use the first one)
+                feedback = existingFeedback.get(0);
                 feedback.setFeedbackType(command.feedbackType());
                 feedback.setComments(command.comments());
-                feedback.setUpdatedAt(Instant.now());
+                feedback.setSubmittedAt(Instant.now());
                 
                 feedback = feedbackPort.update(feedback);
                 
@@ -84,14 +79,14 @@ public class SubmitFeedbackUseCaseImpl implements SubmitFeedbackUseCase {
             } else {
                 // Create new feedback
                 feedback = new Feedback(
-                    null,
-                    command.matchResultId(),
-                    command.userId(),
-                    command.feedbackType()
+                    null,                           // id
+                    command.userId(),               // userId
+                    command.matchResultId(),        // matchResultId
+                    command.feedbackType(),         // feedbackType
+                    command.comments(),             // comments
+                    Instant.now(),                  // submittedAt
+                    Instant.now()                   // createdAt
                 );
-                feedback.setComments(command.comments());
-                feedback.setCreatedAt(Instant.now());
-                feedback.setUpdatedAt(Instant.now());
                 
                 feedback = feedbackPort.save(feedback);
                 
@@ -104,12 +99,16 @@ public class SubmitFeedbackUseCaseImpl implements SubmitFeedbackUseCase {
                 matchResultPort.update(result);
             }
             
+            // FIXED: Use the correct FeedbackResult constructor with 3 parameters
+            String message = "Feedback submitted successfully: " + command.feedbackType();
+            if (command.comments() != null && !command.comments().trim().isEmpty()) {
+                message += " with comments: " + command.comments();
+            }
+            
             return new FeedbackResult(
                 feedback.getId(),
-                command.matchResultId(),
-                command.userId(),
-                command.feedbackType(),
-                feedback.getCreatedAt()
+                message,
+                feedback.getSubmittedAt()
             );
             
         } catch (IllegalArgumentException e) {

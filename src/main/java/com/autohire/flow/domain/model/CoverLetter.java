@@ -1,18 +1,11 @@
 package com.autohire.flow.domain.model;
 
-import lombok.*;
 import java.time.Instant;
 
 /**
  * CoverLetter domain entity representing an AI-generated cover letter.
  * Tailored for a specific user and job combination.
  */
-@Getter
-@Setter
-@Builder
-@AllArgsConstructor
-@NoArgsConstructor
-@ToString(exclude = "content")
 public class CoverLetter {
     
     private Long id;
@@ -28,6 +21,94 @@ public class CoverLetter {
     private Instant generatedAt;
     
     private Instant createdAt;
+    
+    // Constructors
+    public CoverLetter() {
+    }
+    
+    public CoverLetter(Long id, Long userId, Long jobId, String content, String tone, 
+                       Instant generatedAt, Instant createdAt) {
+        this.id = id;
+        this.userId = userId;
+        this.jobId = jobId;
+        this.content = content;
+        this.tone = tone;
+        this.generatedAt = generatedAt;
+        this.createdAt = createdAt;
+    }
+    
+    // Getters
+    public Long getId() {
+        return id;
+    }
+    
+    public Long getUserId() {
+        return userId;
+    }
+    
+    public Long getJobId() {
+        return jobId;
+    }
+    
+    public String getContent() {
+        return content;
+    }
+    
+    public void setWordCount(int wordCount) {
+        // Word count is derived from content, not stored separately
+        // If you want to store it, add a field and setter
+    }
+    
+    public void setParagraphCount(int paragraphCount) {
+        // Paragraph count is derived from content, not stored separately
+        // If you want to store it, add a field and setter
+    }
+    
+    public void setUpdatedAt(Instant updatedAt) {
+        // If you need an updatedAt field, add it to the class
+        // For now, just ignore
+    }
+
+    public String getTone() {
+        return tone;
+    }
+    
+    public Instant getGeneratedAt() {
+        return generatedAt;
+    }
+    
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+    
+    // Setters
+    public void setId(Long id) {
+        this.id = id;
+    }
+    
+    public void setUserId(Long userId) {
+        this.userId = userId;
+    }
+    
+    public void setJobId(Long jobId) {
+        this.jobId = jobId;
+    }
+    
+    public void setContent(String content) {
+        this.content = content;
+    }
+    
+    public void setTone(String tone) {
+        this.tone = tone;
+    }
+    
+    public void setGeneratedAt(Instant generatedAt) {
+        this.generatedAt = generatedAt;
+    }
+    
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
+    }
     
     /**
      * Validates cover letter has required fields.

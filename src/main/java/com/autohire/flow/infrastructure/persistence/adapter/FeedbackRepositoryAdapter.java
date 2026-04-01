@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -60,58 +61,31 @@ public class FeedbackRepositoryAdapter implements FeedbackPort {
 
     @Override
     @Transactional(readOnly = true)
-    public Optional<Feedback> findByMatchResultId(Long matchResultId) {
+    public List<Feedback> findByMatchResultId(Long matchResultId) {
         log.info("Fetching feedback for match result: {}", matchResultId);
         
-        Optional<FeedbackEntity> entity = jpaFeedbackRepository.findByMatchResultId(matchResultId);
+        List<FeedbackEntity> entities = jpaFeedbackRepository.findAll()
+            .stream()
+            .filter(entity -> entity.getMatchResultId() != null && entity.getMatchResultId().equals(matchResultId))
+            .collect(Collectors.toList());
         
-        if (entity.isPresent()) {
-            log.debug("Feedback found for match result: {}", matchResultId);
-            return entity.map(this::convertEntityToDomain);
-        }
+        log.debug("Found {} feedback entries for match result: {}", entities.size(), matchResultId);
         
-        log.debug("No feedback found for match result: {}", matchResultId);
-        return Optional.empty();
+        return entities.stream()
+            .map(this::convertEntityToDomain)
+            .collect(Collectors.toList());
     }
-
+    
     @Override
     @Transactional(readOnly = true)
     public List<Feedback> findByUserId(Long userId) {
         log.info("Fetching all feedback for user: {}", userId);
         
-        List<FeedbackEntity> entities = jpaFeedbackRepository.findByUserId(userId);
-        log.debug("Found {} feedback entries for user: {}", entities.size(), userId);
-        
-        return entities.stream()
-            .map(this::convertEntityToDomain)
-            .collect(Collectors.toList());
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<Feedback> findByMatchResultIdAndUserId(Long matchResultId, Long userId) {
-        log.info("Fetching feedback for match result: {} and user: {}", matchResultId, userId);
-        
         List<FeedbackEntity> entities = jpaFeedbackRepository.findAll()
             .stream()
-            .filter(entity -> entity.getMatchResultId().equals(matchResultId) 
-                && entity.getUserId().equals(userId))
+            .filter(entity -> entity.getUserId() != null && entity.getUserId().equals(userId))
             .collect(Collectors.toList());
-        
-        log.debug("Found {} feedback entries", entities.size());
-        
-        return entities.stream()
-            .map(this::convertEntityToDomain)
-            .collect(Collectors.toList());
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<Feedback> findByFeedbackType(String feedbackType) {
-        log.info("Fetching feedback by type: {}", feedbackType);
-        
-        List<FeedbackEntity> entities = jpaFeedbackRepository.findByFeedbackType(feedbackType);
-        log.debug("Found {} feedback entries with type: {}", entities.size(), feedbackType);
+        log.debug("Found {} feedback entries for user: {}", entities.size(), userId);
         
         return entities.stream()
             .map(this::convertEntityToDomain)
@@ -139,15 +113,21 @@ public class FeedbackRepositoryAdapter implements FeedbackPort {
     public void delete(Long feedbackId) {
         log.info("Deleting feedback with ID: {}", feedbackId);
         
-        jpaFeedbackRepository.deleteById(feedbackId);
-        log.info("Feedback deleted successfully with ID: {}", feedbackId);
+        try {
+            jpaFeedbackRepository.deleteById(feedbackId);
+            log.info("Feedback deleted successfully with ID: {}", feedbackId);
+        } catch (Exception e) {
+            log.error("Error deleting feedback with ID: {}", feedbackId, e);
+            throw new RuntimeException("Failed to delete feedback", e);
+        }
     }
 
     @Override
     @Transactional(readOnly = true)
     public boolean existsByMatchResultId(Long matchResultId) {
-        boolean exists = jpaFeedbackRepository.findByMatchResultId(matchResultId).isPresent();
-        log.debug("Feedback exists for match result {}: {}", matchResultId, exists);
+        boolean exists = jpaFeedbackRepository.findAll()
+            .stream()
+            .anyMatch(entity -> entity.getMatchResultId() != null && entity.getMatchResultId().equals(matchResultId));
         return exists;
     }
 
@@ -161,8 +141,8 @@ public class FeedbackRepositoryAdapter implements FeedbackPort {
         entity.setUserId(feedback.getUserId());
         entity.setFeedbackType(feedback.getFeedbackType());
         entity.setComments(feedback.getComments());
-        entity.setCreatedAt(feedback.getCreatedAt());
-        entity.setUpdatedAt(feedback.getUpdatedAt());
+        entity.setCreatedAt(feedback.getSubmittedAt() != null ? feedback.getSubmittedAt() : Instant.now());
+        entity.setUpdatedAt(Instant.now());
         return entity;
     }
 
@@ -170,15 +150,14 @@ public class FeedbackRepositoryAdapter implements FeedbackPort {
      * Convert JPA entity to domain Feedback model
      */
     private Feedback convertEntityToDomain(FeedbackEntity entity) {
-        Feedback feedback = new Feedback(
+        return new Feedback(
             entity.getId(),
-            entity.getMatchResultId(),
             entity.getUserId(),
-            entity.getFeedbackType()
+            entity.getMatchResultId(),
+            entity.getFeedbackType(),
+            entity.getComments(),
+            entity.getCreatedAt(),
+            entity.getUpdatedAt()
         );
-        feedback.setComments(entity.getComments());
-        feedback.setCreatedAt(entity.getCreatedAt());
-        feedback.setUpdatedAt(entity.getUpdatedAt());
-        return feedback;
     }
 }

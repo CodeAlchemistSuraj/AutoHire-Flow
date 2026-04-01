@@ -46,22 +46,20 @@ public class ResumeController {
         log.info("Resume upload initiated for user: {} ({})", userId, email);
         
         try {
-            // Create upload command
+            // Create upload command - FIXED: Use correct constructor
             UploadResumeUseCase.UploadCommand command = new UploadResumeUseCase.UploadCommand(
                 userId,
-                file.getOriginalFilename(),
-                file.getBytes(),
-                file.getContentType()
+                file
             );
             
-            // Execute use case
-            UploadResumeUseCase.UploadResult result = uploadResumeUseCase.uploadResume(command);
+            // Execute use case - FIXED: Use execute() method
+            UploadResumeUseCase.UploadResult result = uploadResumeUseCase.execute(command);
             
-            // Build response
+            // Build response - FIXED: Match the actual fields
             ResumeUploadResponse response = new ResumeUploadResponse(
                 result.resumeId(),
-                result.skillsCount(),
-                "UPLOADED",
+                result.parsedSkillsCount(),
+                result.status(),
                 result.extractedSkills()
             );
             
@@ -69,7 +67,7 @@ public class ResumeController {
             
             return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(ApiResponse.success(response, "Resume uploaded successfully"));
+                .body(ApiResponse.success("Resume uploaded successfully", response));
                 
         } catch (Exception e) {
             log.error("Resume upload failed for user: {}", userId, e);
@@ -98,14 +96,17 @@ public class ResumeController {
             // For now, return sample response
             ResumeUploadResponse response = new ResumeUploadResponse(
                 1L,
+                "Resume.pdf",
                 5,
                 "UPLOADED",
-                java.util.List.of("Java", "Spring Boot", "PostgreSQL")
+                java.util.List.of("Java", "Spring Boot", "PostgreSQL"),
+                5,
+                3
             );
             
             return ResponseEntity
                 .ok()
-                .body(ApiResponse.success(response, "Resume retrieved successfully"));
+                .body(ApiResponse.success("Resume retrieved successfully", response));
                 
         } catch (Exception e) {
             log.error("Failed to fetch resume for user: {}", userId, e);

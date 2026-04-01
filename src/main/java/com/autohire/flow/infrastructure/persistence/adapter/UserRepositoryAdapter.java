@@ -7,7 +7,7 @@ import com.autohire.flow.infrastructure.persistence.entity.UserEntity;
 import com.autohire.flow.infrastructure.persistence.repository.JpaUserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 
@@ -16,7 +16,7 @@ import java.util.Optional;
  * Bridges domain and infrastructure layers.
  */
 @Slf4j
-@Component
+@Repository
 @RequiredArgsConstructor
 public class UserRepositoryAdapter implements UserPort {
     
@@ -79,16 +79,16 @@ public class UserRepositoryAdapter implements UserPort {
     }
     
     private User toDomain(UserEntity entity) {
-        return User.builder()
-            .id(entity.getId())
-            .email(entity.getEmail())
-            .passwordHash(entity.getPasswordHash())
-            .name(entity.getName())
-            .role(entity.getRole())
-            .isActive(entity.getIsActive())
-            .lastLogin(entity.getLastLogin())
-            .createdAt(entity.getCreatedAt())
-            .updatedAt(entity.getUpdatedAt())
-            .build();
+        return new User(
+            entity.getId(),
+            entity.getEmail(),
+            entity.getPasswordHash(),
+            entity.getName(),
+            entity.getRole(),
+            entity.getIsActive(),
+            entity.getLastLogin(),
+            entity.getCreatedAt(),
+            entity.getUpdatedAt()
+        );
     }
 }

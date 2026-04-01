@@ -57,8 +57,7 @@ public class FeedbackController {
                 );
             
             // Execute use case
-            SubmitFeedbackUseCase.FeedbackResult result = 
-                submitFeedbackUseCase.submitFeedback(command);
+           SubmitFeedbackUseCase.FeedbackResult result = submitFeedbackUseCase.execute(command);
             
             log.info("Feedback submitted successfully for user: {} on match result: {} with ID: {}", 
                 userId, request.getMatchResultId(), result.feedbackId());

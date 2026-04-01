@@ -58,7 +58,7 @@ public class ApplicationController {
             
             // Execute use case
             TrackApplicationUseCase.TrackingResult result = 
-                trackApplicationUseCase.trackApplication(command);
+                trackApplicationUseCase.execute(command);
             
             log.info("Application tracked successfully for user: {} and job: {} with ID: {}", 
                 userId, request.getJobId(), result.applicationId());

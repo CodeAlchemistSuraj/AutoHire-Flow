@@ -1,34 +1,23 @@
 package com.autohire.flow.common.util;
 
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
-/**
- * Utility for password hashing and verification.
- */
-@Slf4j
 @Component
 public class PasswordUtil {
     
-    private static final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    private final PasswordEncoder passwordEncoder;
     
-    /**
-     * Hashes a plain text password using BCrypt.
-     * @param plainPassword plain text password
-     * @return hashed password
-     */
-    public String hashPassword(String plainPassword) {
-        return passwordEncoder.encode(plainPassword);
+    public PasswordUtil() {
+        this.passwordEncoder = new BCryptPasswordEncoder();
     }
     
-    /**
-     * Verifies a plain text password against a hash.
-     * @param plainPassword plain text password
-     * @param hashedPassword hashed password to compare against
-     * @return true if passwords match, false otherwise
-     */
-    public boolean verifyPassword(String plainPassword, String hashedPassword) {
-        return passwordEncoder.matches(plainPassword, hashedPassword);
+    public String encode(String rawPassword) {
+        return passwordEncoder.encode(rawPassword);
+    }
+    
+    public boolean matches(String rawPassword, String encodedPassword) {
+        return passwordEncoder.matches(rawPassword, encodedPassword);
     }
 }

@@ -37,8 +37,17 @@ public class JobPostingEntity {
     @Column(nullable = false)
     private String title;
     
-    @Column(nullable = false)
+    @Column(name = "company", nullable = false)
     private String company;
+    
+    // Alias for company field for compatibility
+    public String getCompanyName() {
+        return this.company;
+    }
+    
+    public void setCompanyName(String companyName) {
+        this.company = companyName;
+    }
     
     @Column(columnDefinition = "TEXT", nullable = false)
     private String description;
@@ -49,8 +58,17 @@ public class JobPostingEntity {
     @Column(name = "salary_range")
     private String salaryRange;
     
+    @Column(name = "salary_min")
+    private Double salaryMin;
+    
+    @Column(name = "salary_max")
+    private Double salaryMax;
+    
     @Column(name = "employment_type")
     private String employmentType;
+    
+    @Column(name = "required_skills")
+    private String requiredSkills;  // Stored as JSON or comma-separated
     
     @Column(columnDefinition = "vector(768)")
     private String embedding;  // Stored as vector type in PostgreSQL

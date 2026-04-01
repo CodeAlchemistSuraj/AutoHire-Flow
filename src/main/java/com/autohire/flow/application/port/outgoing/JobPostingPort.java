@@ -31,6 +31,12 @@ public interface JobPostingPort {
     Optional<JobPosting> findById(Long jobId);
     
     /**
+     * Finds all job postings.
+     * @return list of all jobs
+     */
+    List<JobPosting> findAll();
+    
+    /**
      * Searches for jobs by title.
      * @param title job title to search
      * @return list of matching jobs
@@ -42,7 +48,7 @@ public interface JobPostingPort {
      * @param company company name
      * @return list of jobs from that company
      */
-    List<JobPosting> searchByCompany(String company);
+    List<JobPosting> findByCompany(String company);
     
     /**
      * Finds jobs by location.
@@ -63,4 +69,10 @@ public interface JobPostingPort {
      * @return updated job
      */
     JobPosting update(JobPosting jobPosting);
+    
+    /**
+     * Deletes a job posting by ID.
+     * @param jobId job ID to delete
+     */
+    void deleteById(Long jobId);
 }

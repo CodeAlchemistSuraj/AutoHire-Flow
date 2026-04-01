@@ -19,7 +19,6 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
-import java.util.List;
 
 /**
  * Security Configuration
@@ -41,47 +40,44 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
             // Disable CSRF for stateless REST API
-            .csrf().disable()
+            .csrf(csrf -> csrf.disable())
             
             // Enable CORS
-            .cors()
-            .and()
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             
             // Set session management to stateless
-            .sessionManagement()
-            .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            .and()
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             
-            // Configure authorization
-            .authorizeRequests()
+            // Configure authorization - FIXED: Use requestMatchers instead of antMatchers
+            .authorizeHttpRequests(auth -> auth
                 // Public endpoints - authentication not required
-                .antMatchers(HttpMethod.POST, "/api/v1/auth/register").permitAll()
-                .antMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/v1/auth/register").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
                 
                 // Swagger/API Documentation - publicly accessible
-                .antMatchers("/swagger-ui.html").permitAll()
-                .antMatchers("/swagger-ui/**").permitAll()
-                .antMatchers("/v3/api-docs/**").permitAll()
-                .antMatchers("/actuator/health").permitAll()
+                .requestMatchers("/swagger-ui.html").permitAll()
+                .requestMatchers("/swagger-ui/**").permitAll()
+                .requestMatchers("/v3/api-docs/**").permitAll()
+                .requestMatchers("/actuator/health").permitAll()
                 
                 // All other endpoints require authentication
-                .antMatchers("/api/v1/**").authenticated()
+                .requestMatchers("/api/v1/**").authenticated()
                 
                 // Any other request requires authentication
                 .anyRequest().authenticated()
-            .and()
+            )
             
             // Add JWT authentication filter before UsernamePasswordAuthenticationFilter
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
             
             // Exception handling
-            .exceptionHandling()
+            .exceptionHandling(ex -> ex
                 .authenticationEntryPoint((request, response, authException) -> {
                     response.setContentType("application/json");
                     response.setStatus(401);
                     response.getWriter().write("{\"error\": \"Unauthorized\", \"message\": \"" + 
                         authException.getMessage() + "\"}");
-                });
+                }));
 
         return http.build();
     }
@@ -99,7 +95,6 @@ public class SecurityConfig {
             "http://localhost:8080",
             "http://127.0.0.1:3000",
             "http://127.0.0.1:8080"
-            // Add production domains when deploying
         ));
         
         // Set allowed methods

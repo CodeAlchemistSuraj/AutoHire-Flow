@@ -11,6 +11,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -45,34 +46,18 @@ public class ResumeRepositoryAdapter implements ResumePort {
 
     @Override
     @Transactional(readOnly = true)
-    public Resume findByUserId(Long userId) throws ResumeNotFoundException {
+    public Optional<Resume> findByUserId(Long userId) {
         log.info("Fetching resume for user: {}", userId);
-        
-        ResumeEntity entity = jpaResumeRepository.findByUserId(userId)
-            .orElseThrow(() -> {
-                log.warn("Resume not found for user: {}", userId);
-                return new ResumeNotFoundException(
-                    "Resume not found for user ID: " + userId
-                );
-            });
-        
-        return convertEntityToDomain(entity);
+        return jpaResumeRepository.findByUserId(userId)
+            .map(this::convertEntityToDomain);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Resume findById(Long resumeId) throws ResumeNotFoundException {
+    public Optional<Resume> findById(Long resumeId) {
         log.info("Fetching resume by ID: {}", resumeId);
-        
-        ResumeEntity entity = jpaResumeRepository.findById(resumeId)
-            .orElseThrow(() -> {
-                log.warn("Resume not found with ID: {}", resumeId);
-                return new ResumeNotFoundException(
-                    "Resume not found with ID: " + resumeId
-                );
-            });
-        
-        return convertEntityToDomain(entity);
+        return jpaResumeRepository.findById(resumeId)
+            .map(this::convertEntityToDomain);
     }
 
     @Override
@@ -122,8 +107,7 @@ public class ResumeRepositoryAdapter implements ResumePort {
         }
     }
 
-    @Override
-    @Transactional(readOnly = true)
+    // Remove @Override from this method since it's not in the interface
     public List<Resume> findAllByUserId(Long userId) {
         log.info("Fetching all resumes for user: {}", userId);
         
@@ -137,7 +121,6 @@ public class ResumeRepositoryAdapter implements ResumePort {
             .map(this::convertEntityToDomain)
             .collect(Collectors.toList());
     }
-
     /**
      * Convert domain Resume model to JPA entity
      */
@@ -145,9 +128,11 @@ public class ResumeRepositoryAdapter implements ResumePort {
         ResumeEntity entity = new ResumeEntity();
         entity.setId(resume.getId());
         entity.setUserId(resume.getUserId());
-        entity.setContent(resume.getContent());
-        entity.setEmbedding(resume.getEmbedding()); // Will be stored as vector(768)
-        entity.setSkills(resume.getSkills());
+        entity.setOriginalFilename(resume.getOriginalFileName());
+        entity.setS3Key(resume.getS3Key());
+        entity.setParsedText(resume.getParsedText());
+        entity.setSkills(resume.getSkills() != null ? String.join(",", resume.getSkills()) : "");
+        entity.setEmbedding(convertFloatArrayToString(resume.getEmbedding()));
         entity.setCreatedAt(resume.getCreatedAt());
         entity.setUpdatedAt(resume.getUpdatedAt());
         return entity;
@@ -160,12 +145,49 @@ public class ResumeRepositoryAdapter implements ResumePort {
         Resume resume = new Resume(
             entity.getId(),
             entity.getUserId(),
-            entity.getContent()
+            entity.getOriginalFilename(),
+            entity.getS3Key(),
+            entity.getParsedText(),
+            parseSkills(entity.getSkills()),
+            null,  // experiences - parse from JSONB if needed
+            null,  // educations - parse from JSONB if needed
+            null,  // projects - parse from JSONB if needed
+            convertStringToFloatArray(entity.getEmbedding()),
+            null,  // uploadedAt
+            entity.getUpdatedAt(),
+            entity.getCreatedAt()
         );
-        resume.setEmbedding(entity.getEmbedding());
-        resume.setSkills(entity.getSkills());
-        resume.setCreatedAt(entity.getCreatedAt());
-        resume.setUpdatedAt(entity.getUpdatedAt());
         return resume;
+    }
+    
+    private String convertFloatArrayToString(float[] embedding) {
+        if (embedding == null) {
+            return null;
+        }
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < embedding.length; i++) {
+            if (i > 0) sb.append(",");
+            sb.append(embedding[i]);
+        }
+        return sb.toString();
+    }
+    
+    private float[] convertStringToFloatArray(String embedding) {
+        if (embedding == null || embedding.isEmpty()) {
+            return null;
+        }
+        String[] parts = embedding.split(",");
+        float[] result = new float[parts.length];
+        for (int i = 0; i < parts.length; i++) {
+            result[i] = Float.parseFloat(parts[i].trim());
+        }
+        return result;
+    }
+    
+    private List<String> parseSkills(String skillsStr) {
+        if (skillsStr == null || skillsStr.isEmpty()) {
+            return List.of();
+        }
+        return List.of(skillsStr.split(","));
     }
 }

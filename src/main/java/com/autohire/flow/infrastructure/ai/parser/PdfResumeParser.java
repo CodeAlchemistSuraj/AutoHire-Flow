@@ -3,12 +3,15 @@ package com.autohire.flow.infrastructure.ai.parser;
 import com.autohire.flow.domain.exception.ResumeParseException;
 import com.autohire.flow.domain.model.Resume;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
+
 import org.springframework.stereotype.Component;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -82,10 +85,8 @@ public class PdfResumeParser {
      * Extract text from PDF using PDFBox
      */
     private String extractTextFromPdf(byte[] pdfContent) throws IOException {
-        ByteArrayInputStream bais = new ByteArrayInputStream(pdfContent);
-        PDDocument document = PDDocument.load(bais);
-        
-        try {
+        // PDFBox 3.x - load from byte array using static method
+        try (PDDocument document = Loader.loadPDF(pdfContent)) {
             if (document.isEncrypted()) {
                 log.warn("PDF is encrypted, attempting to read anyway");
             }
@@ -98,10 +99,9 @@ public class PdfResumeParser {
             }
             
             return text;
-        } finally {
-            document.close();
         }
     }
+    
     
     /**
      * Extract contact information (email, phone)
@@ -151,18 +151,21 @@ public class PdfResumeParser {
             
             // Look for common experience indicators
             if (isJobTitleLine(line)) {
-                Resume.Experience.ExperienceBuilder expBuilder = Resume.Experience.builder()
-                    .title(line.replaceAll("(?i)(at|@|-)", "").trim());
+                // Create Experience directly without builder
+                Resume.Experience experience = new Resume.Experience(
+                    line.replaceAll("(?i)(at|@|-)", "").trim(),
+                    null, null, null
+                );
                 
                 // Look for company name in next lines
                 if (i + 1 < lines.length) {
                     String nextLine = lines[i + 1].trim();
                     if (!isDateLine(nextLine)) {
-                        expBuilder.company(nextLine);
+                        experience.setCompany(nextLine);
                     }
                 }
                 
-                experiences.add(expBuilder.build());
+                experiences.add(experience);
             }
         }
         

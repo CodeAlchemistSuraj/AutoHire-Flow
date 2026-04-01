@@ -56,24 +56,27 @@ public class CoverLetterController {
                     request.getTone()
                 );
             
-            // Execute use case
+            // Execute use case - FIXED: Use execute() instead of generateCoverLetter()
             GenerateCoverLetterUseCase.GenerationResult result = 
-                generateCoverLetterUseCase.generateCoverLetter(command);
+                generateCoverLetterUseCase.execute(command);
             
             // Build response
-            CoverLetterResponse response = new CoverLetterResponse(
-                result.content(),
-                result.wordCount(),
-                result.paragraphCount(),
-                result.meetsMinimumRequirements()
-            );
+    CoverLetterResponse response = new CoverLetterResponse(
+        result.coverLetterId(),
+        result.content(),
+        result.wordCount(),
+        result.paragraphCount(),
+        null, // tone - not in result, use default
+        result.generatedAt(),
+        result.meetsMinimumRequirements()
+    );
             
             log.info("Cover letter generated successfully for user: {} and job: {}", 
                 userId, request.getJobId());
             
             return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(ApiResponse.success(response, "Cover letter generated successfully"));
+                .body(ApiResponse.success("Cover letter generated successfully", response));
                 
         } catch (Exception e) {
             log.error("Cover letter generation failed for user: {} and job: {}", 

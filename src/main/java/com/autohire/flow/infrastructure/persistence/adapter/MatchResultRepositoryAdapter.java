@@ -46,6 +46,27 @@ public class MatchResultRepositoryAdapter implements MatchResultPort {
 
     @Override
     @Transactional(readOnly = true)
+    public Optional<MatchResult> findById(Long matchId) {
+        log.info("Fetching match result by ID: {}", matchId);
+        return jpaMatchResultRepository.findById(matchId)
+            .map(this::convertEntityToDomain);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<MatchResult> findByUserId(Long userId) {
+        log.info("Fetching all match results for user: {}", userId);
+        
+        List<MatchResultEntity> entities = jpaMatchResultRepository.findByUserId(userId);
+        log.debug("Found {} total match results for user: {}", entities.size(), userId);
+        
+        return entities.stream()
+            .map(this::convertEntityToDomain)
+            .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Optional<MatchResult> findByUserAndJob(Long userId, Long jobId) {
         log.info("Fetching match result for user: {} and job: {}", userId, jobId);
         
@@ -75,7 +96,7 @@ public class MatchResultRepositoryAdapter implements MatchResultPort {
 
     @Override
     @Transactional(readOnly = true)
-    public List<MatchResult> findHighScoringMatches(Long userId, int minimumScore) {
+    public List<MatchResult> findHighScoringMatches(Long userId, Double minimumScore) {
         log.info("Fetching high-scoring matches for user: {} with minimum score: {}", userId, minimumScore);
         
         List<MatchResultEntity> entities = jpaMatchResultRepository.findHighScoringMatches(userId, minimumScore);
@@ -104,31 +125,10 @@ public class MatchResultRepositoryAdapter implements MatchResultPort {
 
     @Override
     @Transactional(readOnly = true)
-    public List<MatchResult> findAllByUserId(Long userId) {
-        log.info("Fetching all match results for user: {}", userId);
-        
-        List<MatchResultEntity> entities = jpaMatchResultRepository.findAll()
-            .stream()
-            .filter(entity -> entity.getUserId().equals(userId))
-            .collect(Collectors.toList());
-        
-        log.debug("Found {} total match results for user: {}", entities.size(), userId);
-        
-        return entities.stream()
-            .map(this::convertEntityToDomain)
-            .collect(Collectors.toList());
-    }
-
-    @Override
-    @Transactional(readOnly = true)
     public List<MatchResult> findByJobId(Long jobId) {
         log.info("Fetching all match results for job: {}", jobId);
         
-        List<MatchResultEntity> entities = jpaMatchResultRepository.findAll()
-            .stream()
-            .filter(entity -> entity.getJobId().equals(jobId))
-            .collect(Collectors.toList());
-        
+        List<MatchResultEntity> entities = jpaMatchResultRepository.findByJobId(jobId);
         log.debug("Found {} match results for job: {}", entities.size(), jobId);
         
         return entities.stream()
@@ -154,12 +154,11 @@ public class MatchResultRepositoryAdapter implements MatchResultPort {
         entity.setUserId(matchResult.getUserId());
         entity.setJobId(matchResult.getJobId());
         entity.setScore(matchResult.getScore());
-        entity.setStatus(matchResult.getStatus());
         entity.setQualityLevel(matchResult.getQualityLevel());
-        entity.setMatchingSkills(matchResult.getMatchingSkills());
-        entity.setMissingSkills(matchResult.getMissingSkills());
-        entity.setExplanation(matchResult.getExplanation());
+        entity.setStatus(matchResult.getStatus());
+        entity.setNotes(matchResult.getExplanation()); // Store explanation in notes
         entity.setFeedbackReason(matchResult.getFeedbackReason());
+        entity.setMatchedAt(matchResult.getMatchedAt());
         entity.setCreatedAt(matchResult.getCreatedAt());
         entity.setUpdatedAt(matchResult.getUpdatedAt());
         return entity;
@@ -169,20 +168,19 @@ public class MatchResultRepositoryAdapter implements MatchResultPort {
      * Convert JPA entity to domain MatchResult model
      */
     private MatchResult convertEntityToDomain(MatchResultEntity entity) {
-        MatchResult matchResult = new MatchResult(
+        return new MatchResult(
             entity.getId(),
             entity.getUserId(),
             entity.getJobId(),
-            entity.getScore()
+            entity.getScore(),
+            entity.getQualityLevel(),
+            null, // matchingSkills not stored in entity
+            null, // missingSkills not stored in entity
+            entity.getNotes(), // notes as explanation
+            entity.getStatus(),
+            entity.getMatchedAt(),
+            entity.getUpdatedAt(),
+            entity.getCreatedAt()
         );
-        matchResult.setStatus(entity.getStatus());
-        matchResult.setQualityLevel(entity.getQualityLevel());
-        matchResult.setMatchingSkills(entity.getMatchingSkills());
-        matchResult.setMissingSkills(entity.getMissingSkills());
-        matchResult.setExplanation(entity.getExplanation());
-        matchResult.setFeedbackReason(entity.getFeedbackReason());
-        matchResult.setCreatedAt(entity.getCreatedAt());
-        matchResult.setUpdatedAt(entity.getUpdatedAt());
-        return matchResult;
     }
 }

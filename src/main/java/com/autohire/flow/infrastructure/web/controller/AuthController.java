@@ -50,24 +50,24 @@ public class AuthController {
             );
             
             // Execute use case
-            RegisterUserUseCase.RegistrationResult result = registerUserUseCase.registerUser(command);
+            RegisterUserUseCase.RegistrationResult result = registerUserUseCase.execute(command);
+
             
             // Build response
-            AuthResponse authResponse = new AuthResponse(
-                result.userId(),
-                result.email(),
-                result.name(),
-                result.token(),
-                result.expiresIn(),
-                result.issuedAt()
-            );
-            
-            log.info("User registered successfully with ID: {}", result.userId());
+            AuthResponse authResponse = AuthResponse.builder()
+                .userId(result.userId())
+                .email(result.email())
+                .name(result.name())
+                .token(result.token())
+                .expiresIn(null)  // Not available from RegistrationResult
+                .issuedAt(null)   // Not available from RegistrationResult
+                .build();
+
+           log.info("User registered successfully with ID: {}", result.userId());
             
             return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(ApiResponse.success(authResponse, "User registered successfully"));
-                
+                .body(ApiResponse.success("User registered successfully", authResponse));
         } catch (Exception e) {
             log.error("Registration failed for email: {}", request.getEmail(), e);
             throw e;
@@ -94,24 +94,23 @@ public class AuthController {
             );
             
             // Execute use case
-            LoginUserUseCase.LoginResult result = loginUserUseCase.loginUser(command);
+           LoginUserUseCase.LoginResult result = loginUserUseCase.execute(command);
             
             // Build response
-            AuthResponse authResponse = new AuthResponse(
-                result.userId(),
-                result.email(),
-                result.name(),
-                result.token(),
-                result.expiresIn(),
-                result.issuedAt()
-            );
+AuthResponse authResponse = AuthResponse.builder()
+                .userId(result.userId())
+                .email(result.email())
+                .name(result.name())
+                .token(result.token())
+                .expiresIn(null)  // Not available from LoginResult
+                .issuedAt(null)   // Not available from LoginResult
+                .build();
             
             log.info("User logged in successfully: {}", result.userId());
-            
-            return ResponseEntity
+             
+           return ResponseEntity
                 .ok()
-                .body(ApiResponse.success(authResponse, "Login successful"));
-                
+                .body(ApiResponse.success("Login successful", authResponse));
         } catch (Exception e) {
             log.error("Login failed for email: {}", request.getEmail(), e);
             throw e;

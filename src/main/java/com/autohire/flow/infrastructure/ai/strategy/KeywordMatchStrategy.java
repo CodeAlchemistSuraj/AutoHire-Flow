@@ -2,13 +2,15 @@ package com.autohire.flow.infrastructure.ai.strategy;
 
 import com.autohire.flow.domain.model.JobPosting;
 import com.autohire.flow.domain.model.Resume;
+import com.autohire.flow.domain.service.MatchStrategy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
 
 /**
- * Keyword-based matching strategy
+ * Keyword-based matching strategy.
+ * Implementation of the MatchStrategy domain interface.
  */
 @Component
 @Slf4j
@@ -16,23 +18,16 @@ public class KeywordMatchStrategy implements MatchStrategy {
     
     @Override
     public double calculateScore(Resume resume, JobPosting job) {
-        Set<String> resumeSkills = new HashSet<>(resume.getSkills().asList());
+        Set<String> resumeSkills = new HashSet<>(resume.getSkills() != null ? resume.getSkills() : List.of());
         Set<String> jobRequiredSkills = new HashSet<>(job.getRequiredSkills() != null ? job.getRequiredSkills() : List.of());
-        Set<String> jobPreferredSkills = new HashSet<>(job.getPreferredSkills() != null ? job.getPreferredSkills() : List.of());
         
-        // Calculate required skills match (weighted 70%)
+        // Calculate required skills match (100%)
         double requiredMatchPercentage = calculateMatchPercentage(resumeSkills, jobRequiredSkills);
-        double requiredScore = requiredMatchPercentage * 70;
+        double requiredScore = requiredMatchPercentage * 100;
         
-        // Calculate preferred skills match (weighted 30%)
-        double preferredMatchPercentage = calculateMatchPercentage(resumeSkills, jobPreferredSkills);
-        double preferredScore = preferredMatchPercentage * 30;
-        
-        double totalScore = requiredScore + preferredScore;
-        
-        log.debug("Keyword match score: {} (required: {} + preferred: {})", 
-                  totalScore, requiredScore, preferredScore);
-        return Math.min(100.0, Math.max(0.0, totalScore));
+        log.debug("Keyword match score: {} (required: {})", 
+                  requiredScore, requiredScore);
+        return Math.min(100.0, Math.max(0.0, requiredScore));
     }
     
     /**

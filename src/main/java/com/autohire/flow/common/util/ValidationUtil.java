@@ -1,60 +1,56 @@
 package com.autohire.flow.common.util;
 
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-/**
- * Validation utility methods for common validations.
- */
-@Slf4j
+import java.util.regex.Pattern;
+
 @Component
 public class ValidationUtil {
     
-    private static final String EMAIL_REGEX = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}$";
+    private static final Pattern EMAIL_PATTERN = 
+        Pattern.compile("^[A-Za-z0-9+_.-]+@(.+)$");
+    private static final Pattern NAME_PATTERN = 
+        Pattern.compile("^[A-Za-z\\s]{2,100}$");
+    private static final Pattern FILENAME_PATTERN = 
+        Pattern.compile("^[a-zA-Z0-9._-]+$");
     
-    /**
-     * Validates email format.
-     * @param email email to validate
-     * @return true if email is valid, false otherwise
-     */
-    public boolean isValidEmail(String email) {
+    public void validateNotNull(Object value, String fieldName) {
+        if (value == null) {
+            throw new IllegalArgumentException(fieldName + " cannot be null");
+        }
+    }
+    
+    public void validateEmail(String email) {
         if (email == null || email.isBlank()) {
-            return false;
+            throw new IllegalArgumentException("Email cannot be empty");
         }
-        return email.matches(EMAIL_REGEX);
-    }
-    
-    /**
-     * Validates password strength.
-     * @param password password to validate
-     * @return true if password meets requirements (min 8 chars), false otherwise
-     */
-    public boolean isStrongPassword(String password) {
-        if (password == null || password.length() < 8) {
-            return false;
+        if (!EMAIL_PATTERN.matcher(email).matches()) {
+            throw new IllegalArgumentException("Invalid email format");
         }
-        return true;
     }
     
-    /**
-     * Validates match score is within valid range.
-     * @param score score to validate
-     * @return true if score is between 0-100, false otherwise
-     */
-    public boolean isValidScore(Double score) {
-        return score != null && score >= 0 && score <= 100;
+    public void validatePassword(String password) {
+        if (password == null || password.isBlank()) {
+            throw new IllegalArgumentException("Password cannot be empty");
+        }
+        if (password.length() < 8) {
+            throw new IllegalArgumentException("Password must be at least 8 characters");
+        }
     }
     
-    /**
-     * Validates file name is safe.
-     * @param filename filename to validate
-     * @return true if filename is safe, false otherwise
-     */
-    public boolean isValidFilename(String filename) {
+    public void validateName(String name) {
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("Name cannot be empty");
+        }
+        if (!NAME_PATTERN.matcher(name).matches()) {
+            throw new IllegalArgumentException("Name must be 2-100 characters and contain only letters and spaces");
+        }
+    }
+    
+    public boolean isSafeFileName(String filename) {
         if (filename == null || filename.isBlank()) {
             return false;
         }
-        // Check for path traversal attempts
-        return !filename.contains("..") && !filename.contains("/") && !filename.contains("\\");
+        return FILENAME_PATTERN.matcher(filename).matches();
     }
 }

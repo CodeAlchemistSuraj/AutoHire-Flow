@@ -1,5 +1,7 @@
 package com.autohire.flow.application.port.incoming;
 
+import java.time.Instant;
+
 /**
  * Use case for generating cover letters.
  */
@@ -23,6 +25,10 @@ public interface GenerateCoverLetterUseCase {
         String content,
         Integer wordCount,
         Integer paragraphCount,
-        java.time.Instant generatedAt
-    ) {}
+        Instant generatedAt
+    ) {
+        public boolean meetsMinimumRequirements() {
+            return wordCount != null && wordCount >= 200 && paragraphCount != null && paragraphCount >= 3;
+        }
+    }
 }

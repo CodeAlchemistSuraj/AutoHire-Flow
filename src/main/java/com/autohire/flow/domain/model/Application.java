@@ -1,17 +1,11 @@
 package com.autohire.flow.domain.model;
 
-import lombok.*;
 import java.time.Instant;
 
 /**
  * Application domain entity representing a job application by a user.
  * Tracks application status and workflow.
  */
-@Getter
-@Setter
-@Builder
-@AllArgsConstructor
-@NoArgsConstructor
 public class Application {
     
     private Long id;
@@ -29,6 +23,88 @@ public class Application {
     private Instant createdAt;
     
     private Instant updatedAt;
+    
+    // Constructors
+    public Application() {
+    }
+    
+    public Application(Long id, Long userId, Long jobId, String status, Instant appliedAt, 
+                       String notes, Instant createdAt, Instant updatedAt) {
+        this.id = id;
+        this.userId = userId;
+        this.jobId = jobId;
+        this.status = status;
+        this.appliedAt = appliedAt;
+        this.notes = notes;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+    }
+    
+    // Getters
+    public Long getId() {
+        return id;
+    }
+    
+    public Long getUserId() {
+        return userId;
+    }
+    
+    public Long getJobId() {
+        return jobId;
+    }
+    
+    public String getStatus() {
+        return status;
+    }
+    
+    public Instant getAppliedAt() {
+        return appliedAt;
+    }
+    
+    public String getNotes() {
+        return notes;
+    }
+    
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+    
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
+    
+    // Setters
+    public void setId(Long id) {
+        this.id = id;
+    }
+    
+    public void setUserId(Long userId) {
+        this.userId = userId;
+    }
+    
+    public void setJobId(Long jobId) {
+        this.jobId = jobId;
+    }
+    
+    public void setStatus(String status) {
+        this.status = status;
+    }
+    
+    public void setAppliedAt(Instant appliedAt) {
+        this.appliedAt = appliedAt;
+    }
+    
+    public void setNotes(String notes) {
+        this.notes = notes;
+    }
+    
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
+    }
+    
+    public void setUpdatedAt(Instant updatedAt) {
+        this.updatedAt = updatedAt;
+    }
     
     /**
      * Validates application has required fields.

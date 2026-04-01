@@ -3,10 +3,10 @@ package com.autohire.flow.domain.exception;
 public class AiServiceException extends DomainException {
     
     public AiServiceException(String message) {
-        super(message, "AI_SERVICE_ERROR");
+        super(message);
     }
     
     public AiServiceException(String message, Throwable cause) {
-        super(message, "AI_SERVICE_ERROR", cause);
+        super(message, cause);
     }
 }

@@ -49,4 +49,11 @@ public interface FeedbackPort {
      * @param feedbackId ID of feedback to delete
      */
     void delete(Long feedbackId);
+    
+    /**
+     * Checks if feedback exists for a match result.
+     * @param matchResultId match result ID
+     * @return true if feedback exists
+     */
+    boolean existsByMatchResultId(Long matchResultId);
 }

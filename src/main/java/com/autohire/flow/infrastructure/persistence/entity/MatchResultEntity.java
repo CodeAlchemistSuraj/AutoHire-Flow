@@ -18,8 +18,7 @@ import java.time.Instant;
     @Index(name = "idx_matches_score", columnList = "score"),
     @Index(name = "idx_matches_created_at", columnList = "created_at"),
     @Index(name = "idx_matches_user_job", columnList = "user_id,job_id")
-},
-uniqueConstraints = @UniqueConstraint(name = "uk_user_job", columnNames = {"user_id", "job_id"}))
+})
 @Getter
 @Setter
 @Builder
@@ -39,6 +38,18 @@ public class MatchResultEntity {
     
     @Column(precision = 5, scale = 2)
     private Double score;
+    
+    @Column(name = "quality_level", length = 20)
+    private String qualityLevel;
+    
+    @Column(columnDefinition = "TEXT")
+    private String matchingSkills;  // Stored as JSON string or comma-separated
+    
+    @Column(columnDefinition = "TEXT")
+    private String missingSkills;   // Stored as JSON string or comma-separated
+    
+    @Column(columnDefinition = "TEXT")
+    private String explanation;
     
     @Column(length = 20)
     private String status;

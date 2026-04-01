@@ -37,7 +37,7 @@ public class TrackApplicationUseCaseImpl implements TrackApplicationUseCase {
 
     @Override
     @Transactional
-    public TrackingResult trackApplication(TrackingCommand command) {
+    public TrackingResult execute(TrackingCommand command) {
         log.info("Tracking application for user: {} and job: {} with status: {}", 
             command.userId(), command.jobId(), command.status());
         
@@ -70,11 +70,16 @@ public class TrackApplicationUseCaseImpl implements TrackApplicationUseCase {
                     null,
                     command.userId(),
                     command.jobId(),
-                    0 // Default score
+                    0.0,
+                    "LOW",
+                    List.of(),
+                    List.of(),
+                    "Application tracked",
+                    command.status(),
+                    Instant.now(),
+                    Instant.now(),
+                    Instant.now()
                 );
-                matchResult.setStatus(command.status());
-                matchResult.setCreatedAt(Instant.now());
-                matchResult.setUpdatedAt(Instant.now());
                 
                 matchResult = matchResultPort.save(matchResult);
                 
@@ -84,8 +89,6 @@ public class TrackApplicationUseCaseImpl implements TrackApplicationUseCase {
             
             return new TrackingResult(
                 matchResult.getId(),
-                command.userId(),
-                command.jobId(),
                 command.status(),
                 matchResult.getUpdatedAt()
             );

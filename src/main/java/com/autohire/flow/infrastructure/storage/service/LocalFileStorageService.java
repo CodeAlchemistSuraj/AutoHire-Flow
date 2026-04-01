@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -34,41 +35,42 @@ public class LocalFileStorageService implements FileStoragePort {
     private static final long MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 
     @Override
-    public String store(String directory, String fileName, byte[] fileContent) {
-        log.info("Storing file: {} in directory: {}", fileName, directory);
+    public String store(MultipartFile file, Long userId) {
+        log.info("Storing file: {} for user: {}", file.getOriginalFilename(), userId);
         
         // Validate inputs
-        if (!validationUtil.isSafeFileName(fileName)) {
-            throw new IllegalArgumentException("Invalid file name: " + fileName);
+        if (file.isEmpty()) {
+            throw new IllegalArgumentException("File is empty");
         }
         
-        if (fileContent == null || fileContent.length == 0) {
-            throw new IllegalArgumentException("File content is empty");
+        if (!validationUtil.isSafeFileName(file.getOriginalFilename())) {
+            throw new IllegalArgumentException("Invalid file name: " + file.getOriginalFilename());
         }
         
-        if (fileContent.length > MAX_FILE_SIZE) {
+        if (file.getSize() > MAX_FILE_SIZE) {
             throw new IllegalArgumentException("File size exceeds maximum allowed (5MB)");
         }
         
         try {
-            // Create directory structure
-            Path dirPath = Paths.get(storagePath, directory);
+            // Create directory structure for user
+            String userDir = "user_" + userId;
+            Path dirPath = Paths.get(storagePath, userDir);
             Files.createDirectories(dirPath);
             
             // Generate unique file name
-            String uniqueFileName = UUID.randomUUID().toString() + "_" + fileName;
+            String uniqueFileName = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
             Path filePath = dirPath.resolve(uniqueFileName);
             
             // Write file
-            Files.write(filePath, fileContent);
+            Files.write(filePath, file.getBytes());
             
-            String storagePath = directory + "/" + uniqueFileName;
-            log.info("File stored successfully at: {}", storagePath);
+            String storageKey = userDir + "/" + uniqueFileName;
+            log.info("File stored successfully at: {}", storageKey);
             
-            return storagePath;
+            return storageKey;
             
         } catch (IOException e) {
-            log.error("Failed to store file: {}", fileName, e);
+            log.error("Failed to store file: {}", file.getOriginalFilename(), e);
             throw new RuntimeException("Failed to store file: " + e.getMessage(), e);
         }
     }

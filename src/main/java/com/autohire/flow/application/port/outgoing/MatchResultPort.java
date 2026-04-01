@@ -60,4 +60,17 @@ public interface MatchResultPort {
      * @return list of high-scoring matches
      */
     List<MatchResult> findHighScoringMatches(Long userId, Double minScore);
+    
+    /**
+     * Finds all matches for a job.
+     * @param jobId job ID
+     * @return list of matches for that job
+     */
+    List<MatchResult> findByJobId(Long jobId);
+    
+    /**
+     * Deletes a match result by ID.
+     * @param matchResultId match ID to delete
+     */
+    void delete(Long matchResultId);
 }

@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.Optional;
 
 /**
  * Generate Cover Letter Use Case Implementation
@@ -39,33 +40,33 @@ public class GenerateCoverLetterUseCaseImpl implements GenerateCoverLetterUseCas
 
     @Override
     @Transactional
-    public GenerationResult generateCoverLetter(GenerationCommand command) {
+    public GenerationResult execute(GenerationCommand command) {
         log.info("Generating cover letter for user: {} and job: {} with tone: {}", 
             command.userId(), command.jobId(), command.tone());
         
         try {
-            // Fetch resume
-            Resume resume = resumePort.findByUserId(command.userId());
+            // Fetch resume with Optional handling
+            Resume resume = resumePort.findByUserId(command.userId())
+                .orElseThrow(() -> new ResumeNotFoundException("Resume not found for user: " + command.userId()));
             
-            // Fetch job posting
-            JobPosting job = jobPostingPort.findById(command.jobId());
+            // Fetch job posting with Optional handling
+            JobPosting job = jobPostingPort.findById(command.jobId())
+                .orElseThrow(() -> new JobNotFoundException("Job not found with id: " + command.jobId()));
             
             // Check if cover letter already exists
-            var existing = coverLetterPort.findByUserAndJob(command.userId(), command.jobId());
+            Optional<CoverLetter> existing = coverLetterPort.findByUserAndJob(command.userId(), command.jobId());
             if (existing.isPresent()) {
                 log.info("Cover letter already exists for user: {} and job: {}", 
                     command.userId(), command.jobId());
-                CoverLetter existing_letter = existing.get();
+                CoverLetter existingLetter = existing.get();
                 return new GenerationResult(
-                    existing_letter.getContent(),
-                    existing_letter.getWordCount(),
-                    existing_letter.getParagraphCount(),
-                    existing_letter.meetsMinimumRequirements()
+                    existingLetter.getId(),
+                    existingLetter.getContent(),
+                    existingLetter.getWordCount(),
+                    existingLetter.getParagraphCount(),
+                    existingLetter.getCreatedAt()
                 );
             }
-            
-            // Build prompt for LLM
-            String prompt = buildLLMPrompt(resume, job, command.tone());
             
             // Call LLM to generate cover letter
             String generatedContent = chatPort.generateCoverLetter(resume, job, command.tone());
@@ -78,20 +79,17 @@ public class GenerateCoverLetterUseCaseImpl implements GenerateCoverLetterUseCas
             // Analyze generated content
             int wordCount = countWords(generatedContent);
             int paragraphCount = countParagraphs(generatedContent);
-            boolean meetsRequirements = validateCoverLetter(generatedContent, wordCount, paragraphCount);
             
             // Create cover letter domain model
             CoverLetter coverLetter = new CoverLetter(
                 null,
                 command.userId(),
                 command.jobId(),
-                generatedContent
+                generatedContent,
+                command.tone(),
+                Instant.now(),
+                Instant.now()
             );
-            coverLetter.setTone(command.tone());
-            coverLetter.setWordCount(wordCount);
-            coverLetter.setParagraphCount(paragraphCount);
-            coverLetter.setCreatedAt(Instant.now());
-            coverLetter.setUpdatedAt(Instant.now());
             
             // Save to database
             CoverLetter savedLetter = coverLetterPort.save(coverLetter);
@@ -100,10 +98,11 @@ public class GenerateCoverLetterUseCaseImpl implements GenerateCoverLetterUseCas
                 command.userId(), command.jobId(), savedLetter.getId());
             
             return new GenerationResult(
+                savedLetter.getId(),
                 generatedContent,
                 wordCount,
                 paragraphCount,
-                meetsRequirements
+                savedLetter.getCreatedAt()
             );
             
         } catch (ResumeNotFoundException e) {
@@ -116,34 +115,6 @@ public class GenerateCoverLetterUseCaseImpl implements GenerateCoverLetterUseCas
             log.error("Cover letter generation failed", e);
             throw new RuntimeException("Failed to generate cover letter: " + e.getMessage(), e);
         }
-    }
-
-    /**
-     * Build prompt for LLM
-     */
-    private String buildLLMPrompt(Resume resume, JobPosting job, String tone) {
-        return String.format(
-            """
-            Generate a professional cover letter with the following requirements:
-            - Tone: %s
-            - Candidate: %s
-            - Skills: %s
-            - Job Title: %s
-            - Company: %s
-            - Job Description: %s
-            
-            The cover letter must be 3 paragraphs, between 150-500 words.
-            First paragraph: Opening interest statement
-            Second paragraph: Relevant skills and experience
-            Third paragraph: Closing commitment
-            """,
-            tone,
-            resume.getId(),
-            String.join(", ", resume.getSkills()),
-            job.getTitle(),
-            job.getCompanyName(),
-            job.getDescription()
-        );
     }
 
     /**
@@ -174,21 +145,5 @@ public class GenerateCoverLetterUseCaseImpl implements GenerateCoverLetterUseCas
         }
         
         return Math.max(count, 1);
-    }
-
-    /**
-     * Validate cover letter meets requirements
-     */
-    private boolean validateCoverLetter(String content, int wordCount, int paragraphCount) {
-        boolean hasMinWords = wordCount >= MIN_WORD_COUNT;
-        boolean hasMaxWords = wordCount <= MAX_WORD_COUNT;
-        boolean hasParagraphs = paragraphCount == REQUIRED_PARAGRAPH_COUNT;
-        
-        boolean isValid = hasMinWords && hasMaxWords && hasParagraphs;
-        
-        log.info("Cover letter validation - Words: {} (valid: {}), Paragraphs: {} (valid: {})", 
-            wordCount, hasMinWords && hasMaxWords, paragraphCount, hasParagraphs);
-        
-        return isValid;
     }
 }

@@ -2,11 +2,13 @@ package com.autohire.flow.infrastructure.ai.strategy;
 
 import com.autohire.flow.domain.model.JobPosting;
 import com.autohire.flow.domain.model.Resume;
+import com.autohire.flow.domain.service.MatchStrategy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
- * Semantic matching strategy using vector embeddings
+ * Semantic matching strategy using vector embeddings.
+ * Implementation of the MatchStrategy domain interface.
  */
 @Component
 @Slf4j
